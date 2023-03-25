@@ -1,11 +1,8 @@
 from portscan import PortScanner
-from runner import Runner
 from dns import DnsResolution
 from domains import SubdomainScannerAmass
 from bbdb import BBDB
 import os
-import sys
-import time
 
 os.environ['PATH'] += ":/home/joona/go/bin"
 
@@ -40,4 +37,4 @@ output = x.scan()
 ps_results = x.parse(output)
 for host in ps_results:
     for port in host.ports:
-        db.insert_port_for_host(port.port, port.protocol, port.product, port.version, host.ip)
+        db.insert_port_for_host(port.port, port.protocol, port.service, port.product, port.version, host.ip)

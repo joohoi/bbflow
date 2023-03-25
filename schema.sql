@@ -37,7 +37,9 @@ CREATE TABLE "webs" (
   "url" varchar,
   "domain_id" int,
   "port_id" int,
-  "response" varchar
+  "response" varchar,
+  "title" varchar,
+  "metadata" JSONB DEFAULT '{}'
 );
 
 ALTER TABLE "domains" ADD FOREIGN KEY ("project_id") REFERENCES "projects" ("id");

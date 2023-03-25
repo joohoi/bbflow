@@ -116,7 +116,7 @@ class SubdomainScannerAmass(SubdomainScannerRoot):
         :param name: domain name to run amass for
         :return: filepath to amass output file
         """
-        print("yay, running for {}".format(name))
+
         tmpfile = self._tmpfilename()
         r = Runner("amass enum -d {} -passive -json {}".format(name, tmpfile))
         r.start()

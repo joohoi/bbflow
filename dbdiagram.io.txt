@@ -41,6 +41,8 @@ Table webs {
   domain_id int [ref: > domains.id]
   port_id int [ref: > ports.id]
   response varchar
+  title varchar
+  metadata JSONB [default: '{}']
 }
 
 //Table author_book {

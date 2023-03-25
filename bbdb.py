@@ -103,14 +103,21 @@ class BBDB(object):
         query = "SELECT * FROM ports WHERE number = %s AND host_id = %s"
         return self._execute_fetchone(query, (port, hres["id"]))
 
-    def insert_port(self, port, protocol, service, version, host_id):
-        query = "INSERT INTO ports (number, protocol, service, version, host_id) VALUES (%s, %s, %s, %s, %s) RETURNING id"
-        return self._insert_fetchone(query, (port, protocol, service, version, host_id))
+    def insert_port(self, port, protocol, service, product, version, host_id):
+        query = "INSERT INTO ports (number, protocol, service, product, version, host_id) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id"
+        return self._insert_fetchone(query, (port, protocol, service, product, version, host_id))
 
-    def insert_port_for_host(self, port, protocol, service, version, host):
+    def insert_port_for_host(self, port, protocol, service, product, version, host):
         hres = self.host_by_ip(host)
         existing_port = self.fetch_port(port, hres["address"])
         if not existing_port:
-            return self.insert_port(port, protocol, service, version, hres["id"])
+            return self.insert_port(port, protocol, service, product, version, hres["id"])
         else:
             return {}
+    def all_domains_by_projectid(self, project_id):
+        query = "SELECT * FROM domains WHERE project_id = %s"
+        return self._execute_fetchall(query, (project_id,))
+
+    def all_ports_for_subdomain(self, subdomain):
+        query = "SELECT * FROM ports p INNER JOIN hosts h ON p.host_id = h.id INNER JOIN domains_hosts dh ON h.id = dh.hosts_id INNER JOIN domains d ON d.id = dh.domains_id WHERE d.name = %s"
+        return self._execute_fetchall(query, (subdomain,))

@@ -1,11 +1,10 @@
 """Portscanner implementation using nmap"""
 import ipaddress
-import math
 import time
 from datetime import datetime
 
 import xml.etree.ElementTree as ET
-import xmltodict
+
 
 from runner import Runner
 
@@ -91,13 +90,17 @@ class PortScanner(object):
                 state = port.find('state').get('state')
                 if state == 'open':
                     port_id = port.attrib['portid']
+                    protocol = port.attrib['protocol']
                     service_name = port.find('service').get('product')
                     if service_name is None:
                         service_name = port.find('service').get('name')
+                    service_product = port.find('service').get('product')
+                    if service_product is None:
+                        service_product = ''
                     service_version = port.find('service').get('version')
                     if service_version is None:
                         service_version = ''
-                    port_list.append(Port(port_id, service_name, service_version))
+                    port_list.append(Port(port_id, protocol, service_name, service_product, service_version))
             if port_list:
                 results.append(Host(ip, port_list))
         return results
