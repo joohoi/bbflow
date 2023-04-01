@@ -119,7 +119,7 @@ class BBDB(object):
         return self._execute_fetchall(query, (project_id,))
 
     def all_ports_for_subdomain(self, subdomain):
-        query = "SELECT * FROM ports p INNER JOIN hosts h ON p.host_id = h.id INNER JOIN domains_hosts dh ON h.id = dh.hosts_id INNER JOIN domains d ON d.id = dh.domains_id WHERE d.name = %s"
+        query = "SELECT DISTINCT p.* FROM ports p INNER JOIN hosts h ON p.host_id = h.id INNER JOIN domains_hosts dh ON h.id = dh.hosts_id INNER JOIN domains d ON d.id = dh.domains_id WHERE d.name = %s"
         return self._execute_fetchall(query, (subdomain,))
 
     def insert_webs(self, domain_id, port_id, url, response, title, metadata):

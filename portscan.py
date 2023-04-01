@@ -46,10 +46,14 @@ class PortScanner(object):
         else:
             whichports = "-p{}".format(self.ports)
 
-        runner = Runner("nmap -sC -iL tempfile.txt {} -oX {}".format(whichports, timestamped_filename))
+        runner = Runner("nmap -sC --host-timeout 5m -T4 -iL tempfile.txt {} -oX {}".format(whichports, timestamped_filename))
         runner.start()
         while runner.running():
             time.sleep(0.01)
+            if runner.run_time() > 5 * 60 * len(self.hosts):
+                # Process has most likely halted, as we have --host-timeout 5m
+                runner.kill()
+                raise PortScannerException("nmap froze, and was killed")
         if runner.exitcode() != 0:
             output = ""
             if runner.output():

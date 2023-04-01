@@ -25,6 +25,7 @@ class Runner(object):
         self._stdin = stdin
         self._output = ""
         self._error = ""
+        self.start_time = 0
 
     def start(self):
         """
@@ -33,6 +34,7 @@ class Runner(object):
         self.proc = subprocess.Popen(self.command, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE, stdin=subprocess.PIPE, text=True)
         self.started = True
+        self.start_time = time.time()
         if self._stdin:
             self.proc.communicate(input=self._stdin)
 
@@ -88,3 +90,15 @@ class Runner(object):
         """
         self._update()
         return self._error
+
+    def run_time(self):
+        """
+        Returns the runtime of the command
+        """
+        return int(time.time() - self.start_time)
+
+    def kill(self):
+        """
+        Kills the command
+        """
+        self.proc.kill()
