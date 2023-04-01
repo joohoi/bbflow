@@ -7,7 +7,7 @@ os.environ['PATH'] += ":/home/joona/go/bin"
 
 db = BBDB()
 
-project = db.insert_project("testproject")
+project = db.insert_project("yahoo")
 
 domains = db.all_domains_by_projectid(project['id'])
 for domain in domains:
@@ -19,6 +19,7 @@ for domain in domains:
     if dbports:
         td = WebTechDetect(domain['name'], ",".join(str(p) for p in ports))
         try:
-            td.start()
+            results = td.start()
+            print("yo")
         except techdetect.WebTechDetectException:
             continue

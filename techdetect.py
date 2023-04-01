@@ -1,5 +1,6 @@
 import time
 import pathlib
+import json
 
 from runner import Runner
 
@@ -25,15 +26,49 @@ class WebTechDetect(object):
             raise WebTechDetectException("httpx failed with exit code {}: {}\n{}".format(r.exitcode(), r.output(), r.error()))
         if r.output() == "":
             raise WebTechDetectException("httpx failed to detect any web technologies (no output) for {}".format(self.domain))
-        print("---------------------------------------\n{}\n---------------------------------------".format(r.output()))
+        #print("---------------------------------------\n{}\n---------------------------------------".format(r.output()))
+        outputs = []
+        for line in r.output().splitlines():
+            outputs.append(self._parse(line))
+        return outputs
 
     def _parse(self, data):
-        pass
+        entry = json.loads(data)
+        try:
+            url = entry["url"]
+        except KeyError:
+            url = ""
+        try:
+            domain = entry["input"]
+        except KeyError:
+            domain = ""
+        try:
+            port = int(entry["port"])
+        except KeyError:
+            port = 0
+        try:
+            title = entry["title"]
+        except KeyError:
+            title = ""
+        try:
+            response = ""
+            responsefn = entry["stored_response_path"]
+            with open(responsefn, "r") as f:
+                response = f.read()
+        except KeyError:
+            pass
+        return WebResponse(domain, port, url, title, response, entry)
 
 class WebResponse(object):
-    def __init__(self, domain, port, title, response, metadata):
+    def __init__(self, domain, port, url, title, response, metadata):
         self.domain = domain
         self.port = port
+        self.url = url
         self.title = title
         self.response = response
         self.metadata = metadata
+
+    def __str__(self):
+        return "{} - {}".format(self.url, self.title)
+    def __repr__(self):
+        return self.__str__()

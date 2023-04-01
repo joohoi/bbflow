@@ -8,9 +8,9 @@ os.environ['PATH'] += ":/home/joona/go/bin"
 
 db = BBDB()
 
-project = db.insert_project("testproject")
+project = db.insert_project("yahoo")
 
-subs = SubdomainScannerAmass("io.fi")
+subs = SubdomainScannerAmass("ryot.org")
 subs.start(recursive=False)
 domains = subs.domainobjects
 print(domains)
