@@ -11,12 +11,22 @@ Table domains {
   name varchar [unique]
   sources varchar
   project_id int [ref: > projects.id]
+  last_seen timestamp [default: `now()`]
+}
+
+Table dns {
+  id int [pk, increment]
+  domains_id int [ref: > domains.id]
+  type varchar
+  value varchar
+  last_seen timestamp [default: `now()`]
 }
 
 Table hosts {
   id int [pk, increment]
   address varchar [unique]
   family varchar
+  last_seen timestamp [default: `now()`]
 }
 
 Table ports {
@@ -27,12 +37,14 @@ Table ports {
   service varchar
   product varchar
   version varchar
+  last_seen timestamp [default: `now()`]
 }
 
 Table domains_hosts {
   id int [pk, increment]
   domains_id int [ref: > domains.id]
   hosts_id int [ref: > hosts.id]
+  last_seen timestamp [default: `now()`]
 }
 
 Table webs {
@@ -43,6 +55,7 @@ Table webs {
   response varchar
   title varchar
   metadata JSONB [default: '{}']
+  last_seen timestamp [default: `now()`]
 }
 
 //Table author_book {

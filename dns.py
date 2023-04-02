@@ -33,12 +33,16 @@ class DnsResolution(object):
         self._cname = []
         self._txt = []
         self._ns = []
+        self._mx = []
+        self._ptr = []
+        self._soa = []
+        self._srv = []
 
     def resolve(self):
         """
         Does the DNS resolution using the dnsx command line tool
         """
-        runner = Runner("dnsx -a -aaaa -cname -txt -ns -resp -json", stdin=self.domain)
+        runner = Runner("dnsx -a -aaaa -cname -txt -ns -mx -soa -ptr -srv -resp -json", stdin=self.domain)
         runner.start()
         while runner.running():
             time.sleep(0.01)
@@ -62,6 +66,14 @@ class DnsResolution(object):
             self._txt.append(i)
         for i in self._extract_field("ns", output):
             self._ns.append(i)
+        for i in self._extract_field("mx", output):
+            self._mx.append(i)
+        for i in self._extract_field("ptr", output):
+            self._ptr.append(i)
+        for i in self._extract_field("soa", output):
+            self._soa.append(i)
+        for i in self._extract_field("srv", output):
+            self._srv.append(i)
 
     def _extract_field(self, fieldname, data):
         """
@@ -75,6 +87,10 @@ class DnsResolution(object):
             return data[fieldname]
         except KeyError:
             return []
+
+    def did_resolve(self):
+        return any([self._a, self._aaaa, self._cname, self._txt, self._ns, self._mx, self._ptr, self._soa, self._srv])
+
     def a(self):
         """
         Returns a list of A records
@@ -98,3 +114,51 @@ class DnsResolution(object):
         :return: list of CNAME records
         """
         return self._cname
+
+    def txt(self):
+        """
+        Returns a list of TXT records
+
+        :return: list of TXT records
+        """
+        return self._txt
+
+    def ns(self):
+        """
+        Returns a list of NS records
+
+        :return: list of NS records
+        """
+        return self._ns
+
+    def mx(self):
+        """
+        Returns a list of MX records
+
+        :return: list of MX records
+        """
+        return self._mx
+
+    def ptr(self):
+        """
+        Returns a list of PTR records
+
+        :return: list of PTR records
+        """
+        return self._ptr
+
+    def soa(self):
+        """
+        Returns a list of SOA records
+
+        :return: list of SOA records
+        """
+        return self._soa
+
+    def srv(self):
+        """
+        Returns a list of SRV records
+
+        :return: list of SRV records
+        """
+        return self._srv

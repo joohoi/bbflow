@@ -164,6 +164,8 @@ class Domain(object):
         self.sources = sources
         self.tag = tag
         self.wildcard = wildcard
+        self.resolved = False
+        self.dns = {"a": [], "aaaa": [], "cname": [], "mx": [], "ns": [], "ptr": [], "soa": [], "srv": [], "txt": []}
 
     def __repr__(self):
         return "Name: {} / Sources: {} / Tag: {} / Wildcard: {}".format(
