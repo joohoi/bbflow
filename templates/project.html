@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %} Project: {{ project['name'] }} {% endblock %}</h1>
+    <table id="projectTable" class="table table-hover table-product" style="width:100%">
+        <thead>
+        <tr>
+            <th>Domain</th>
+            <th>Hosts</th>
+            <th>Ports</th>
+            <th>DNS records</th>
+            <th>Websites</th>
+            <th>Last seen</th>
+            <th></th>
+        </tr>
+        <!--
+        "domain_id": domain["id"],
+        "domain_name": domain["name"],
+        "last_seen": domain["last_seen"],
+        "hosts": db.hosts_by_domain(domain["name"]),
+        "services": db.all_ports_for_subdomain(domain["name"]),
+        "dns": db.dns_for_domain(domain["name"]),
+        "websites": db.webs_for_domain(domain["name"])
+        -->
+        </thead>
+        <tbody>
+        {% for domain in domains %}
+        <tr>
+                <td>
+                    <a href="{{ url_for('domain', domain_id=domain['domain_id']) }}">{{ domain['domain_name'] }}</a>
+                </td>
+                <td>
+                    {% for host in domain['hosts'] %}
+                        <a href="{{ url_for('host', host_id=host['id']) }}">{{ host['address'] }}</a><br />
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for port in domain['ports'] %}
+                        <span class="badge {% if port == 80 %}bg-secondary{% elif port == 443 %}bg-success{% elif port == 22 %}bg-primary{% else %}bg-dark{% endif %}">{{ port }}</span>
+                    {% endfor %}
+                </td>
+                <td>{{ domain['dns']|length }}</td>
+                <td>{{ domain['websites']|length }}</td>
+                <td>{{ domain['last_seen'].strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                <td>
+                    <div class="dropdown">
+                      <a class="dropdown-toggle icon-burger-mini" href="#" role="button" id="dropdownMenuLink"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-display="static">
+                      </a>
+
+                      <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuLink">
+                        <a class="dropdown-item" href="#">Action</a>
+                        <a class="dropdown-item" href="#">Another action</a>
+                        <a class="dropdown-item" href="#">Something else here</a>
+                      </div>
+                    </div>
+                </td>
+        {% endfor %}
+        </tbody>
+    </table>
+    <script>
+        let table = new DataTable('#projectTable');
+    </script>
+{% endblock %}

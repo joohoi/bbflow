@@ -37,22 +37,26 @@ class DnsResolution(object):
         self._ptr = []
         self._soa = []
         self._srv = []
+        self._process = None
+        self.running = False
 
     def resolve(self):
         """
         Does the DNS resolution using the dnsx command line tool
         """
-        runner = Runner("dnsx -a -aaaa -cname -txt -ns -mx -soa -ptr -srv -resp -json", stdin=self.domain)
-        runner.start()
-        while runner.running():
+        self._process = Runner("dnsx -a -aaaa -cname -txt -ns -mx -soa -ptr -srv -resp -json", stdin=self.domain)
+        self.running = True
+        self._process.start()
+        while self._process.running():
             time.sleep(0.01)
-        if runner.exitcode() != 0:
-            raise DnsResolutionException("dnsx failed with exit code {}".format(runner.exitcode()))
-        if runner.output() == "":
+        self.running = False
+        if self._process.exitcode() != 0:
+            raise DnsResolutionException("dnsx failed with exit code {}".format(self._process.exitcode()))
+        if self._process.output() == "":
             # Domain was not resolvable
             raise DnsResolutionNotFound("dnsx failed to resolve {}".format(self.domain))
         try:
-            output = json.loads(runner.output())
+            output = json.loads(self._process.output())
         except ValueError:
             raise DnsResolutionException("dnsx failed with invalid output")
 
@@ -74,6 +78,13 @@ class DnsResolution(object):
             self._soa.append(i)
         for i in self._extract_field("srv", output):
             self._srv.append(i)
+
+    def kill(self):
+        """
+        Kills the running process
+        """
+        if self.running:
+            self._process.kill()
 
     def _extract_field(self, fieldname, data):
         """

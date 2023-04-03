@@ -3,20 +3,18 @@ from dns import DnsResolution
 from domains import SubdomainScannerAmass
 from techdetect import WebTechDetect
 from bbdb import BBDB
+from PIL import Image
 import techdetect
 import os
 import json
+import requests
+import time
+import uuid
+import shutil
 
 os.environ['PATH'] += ":/home/joona/go/bin"
 
-#db = BBDB()
-
-#project = db.insert_project("yahoo")
-
-#subs = SubdomainScannerAmass("io.fi")
-#subs.start(recursive=False)
-#domains = subs.domainobjects
-#print(domains)
+SCREENSHOT_DIR = "static/screenshots/"
 
 
 class Automation(object):
@@ -27,6 +25,9 @@ class Automation(object):
         self.project = self.db.project_by_name(self.project_name)
         self.domains = []
         self.resolved = []
+        self._proc = None
+        self.running = False
+        self.current_job = ""
 
     def _enum_domains(self, name, recursive=False, depth=1):
         subs = SubdomainScannerAmass(name)
@@ -62,7 +63,7 @@ class Automation(object):
             found_domains += self._enum_domains(domain)
         resolved_domains = self._resolve_domains(found_domains)
         for domain in resolved_domains:
-            db_domain = self.db.insert_domain(domain.name, self.project['id'], ",".join(domain.sources))
+            self.db.insert_domain(domain.name, self.project["id"], ",".join(domain.sources))
             for i in domain.dns["a"]:
                 self.db.insert_host_for_domainname(domain.name, i, "ipv4")
                 self.db.insert_or_update_dns(domain.name, "a", i)
@@ -77,8 +78,6 @@ class Automation(object):
                 self.db.insert_or_update_dns(domain.name, "ns", i)
             for i in domain.dns["mx"]:
                 self.db.insert_or_update_dns(domain.name, "mx", i)
-            #for i in domain.dns["soa"]:
-            #    self.db.insert_or_update_dns(domain.name, "soa", i)
             for i in domain.dns["srv"]:
                 self.db.insert_or_update_dns(domain.name, "srv", i)
             for i in domain.dns["ptr"]:
@@ -94,6 +93,62 @@ class Automation(object):
             for port in host.ports:
                 self.db.insert_or_update_port_for_host(port.port, port.protocol, port.service, port.product,
                                                        port.version, host.ip)
+
+    def screenshot_webs(self, refresh=False):
+        GOWITNESS_URL = "https://bbss.0xff.fi/api/"
+        GOWITNESS_AUTH = "Basic MGRyZTpCTU9JYjI0bW9pYm0yNG9hc2R2YnZhdg=="
+        headers = {"Authorization": GOWITNESS_AUTH, "Content-Type": "application/json"}
+        domains = self.db.all_domains_by_projectid(self.project['id'])
+        all_webs = []
+        queued_webs = []
+        for domain in domains:
+            tmp_webs = self.db.webs_for_domain(domain['name'])
+            all_webs += tmp_webs
+        for web in all_webs:
+            if refresh or not web["screenshot"]:
+                queued_webs.append(web)
+                requests.post(GOWITNESS_URL + "screenshot",
+                              headers=headers,
+                              json={"url": web["url"], "oneshot": "false"}, verify=False)
+                time.sleep(2)
+        retries = 0
+        max_retries = 5
+        if queued_webs:
+            while retries < max_retries and len(queued_webs) > 0:
+                retries += 1
+                ss_req = requests.get(GOWITNESS_URL + "list", headers=headers, verify=False)
+                if ss_req.status_code == 200:
+                    ss_data = ss_req.json()
+                    queued_webs = self._update_screenshots(queued_webs, ss_data)
+
+    def _update_screenshots(self, queued_webs, ss_data):
+        remaining_webs = []
+        for web in queued_webs:
+            found = False
+            for ss in ss_data:
+                if ss["URL"] == web["url"]:
+                    screenshotpath = self._get_screenshot(ss["ID"])
+                    if screenshotpath:
+                        self.db.update_webs_screenshot(web["id"], screenshotpath)
+                        found = True
+            if not found:
+                remaining_webs.append(web)
+        return remaining_webs
+
+    def _get_screenshot(self, id):
+        GOWITNESS_URL = "https://bbss.0xff.fi/api/"
+        GOWITNESS_AUTH = "Basic MGRyZTpCTU9JYjI0bW9pYm0yNG9hc2R2YnZhdg=="
+        headers = {"Authorization": GOWITNESS_AUTH}
+        filename = str(uuid.uuid4()) + ".png"
+        res = requests.get(GOWITNESS_URL + "detail/{}".format(id) + "/screenshot", headers=headers, verify=False, stream=True)
+        if res.status_code == 200:
+            with open(SCREENSHOT_DIR + filename, 'wb') as f:
+                shutil.copyfileobj(res.raw, f)
+            with Image.open(SCREENSHOT_DIR + filename) as img:
+                img.thumbnail((640, 640))
+                img.save(SCREENSHOT_DIR + "thumb_" + filename, "PNG")
+            return filename
+        return None
 
     def techdetect_and_update(self):
         db_domains = self.db.all_domains_by_projectid(self.project['id'])
@@ -120,10 +175,11 @@ class Automation(object):
                     continue
 
 
-a = Automation("Oma!")
-#a.resolve_and_update(["io.fi", "1o.fi", "kuori.org"])
+a = Automation("Visma")
+a.resolve_and_update(["vismaonline.com"])
 a.portscan_and_update()
 a.techdetect_and_update()
+a.screenshot_webs()
 
 """
 resolved = []

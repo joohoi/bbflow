@@ -54,6 +54,8 @@ Table webs {
   port_id int [ref: > ports.id]
   response varchar
   title varchar
+  screenshot varchar
+  screenshot_url varchar
   metadata JSONB [default: '{}']
   last_seen timestamp [default: `now()`]
 }

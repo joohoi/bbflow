@@ -23,6 +23,8 @@ class SubdomainScannerRoot(object):
         self.subdomains = []
         self._checked = []
         self.domainobjects = []
+        self._process = None
+        self.running = False
 
     def checked(self, name):
         """Mark a subdomain as checked"""
@@ -118,13 +120,22 @@ class SubdomainScannerAmass(SubdomainScannerRoot):
         """
 
         tmpfile = self._tmpfilename()
-        r = Runner("amass enum -d {} -passive -json {}".format(name, tmpfile))
-        r.start()
-        r.waituntilready()
-        if r.exitcode() and r.exitcode() != 0:
-            raise SubdomainToolException(r.error())
+        self._process = Runner("amass enum -d {} -passive -json {}".format(name, tmpfile))
+        self.running = True
+        self._process.start()
+        self._process.waituntilready()
+        self.running = False
+        if self._process.exitcode() and self._process.exitcode() != 0:
+            raise SubdomainToolException(self._process.error())
         self.checked(name)
         return tmpfile
+
+    def kill(self):
+        """Kills the amass process"""
+        try:
+            self._process.kill()
+        except AttributeError:
+            pass
 
     def parse(self, data):
         """

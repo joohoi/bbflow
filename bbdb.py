@@ -56,17 +56,17 @@ class BBDB(object):
         self.conn.commit()
         return retval
 
+    def all_projects(self):
+        query = "SELECT * FROM projects"
+        return self._execute_fetchall(query)
 
-    def hosts_by_domain(self, domain):
-        query = """
-        SELECT * FROM hosts h 
-            INNER JOIN domains_hosts dh 
-            ON h.id = dh.hosts_id 
-            INNER JOIN domains d 
-            ON d.id = dh.domains_id 
-        WHERE d.name = %s
-        """
-        return self._execute_fetchall(query, (domain,))
+    def project_by_name(self, name):
+        query = "SELECT * FROM projects WHERE name = %s"
+        return self._execute_fetchone(query, (name,))
+
+    def project_by_id(self, id):
+        query = "SELECT * FROM projects WHERE id = %s"
+        return self._execute_fetchone(query, (id,))
 
     def insert_project(self, name):
         query = "INSERT INTO projects (name) VALUES (%s) ON CONFLICT (name) DO UPDATE SET name=excluded.name RETURNING id"
@@ -120,17 +120,58 @@ class BBDB(object):
         """
         return self._execute_fetchall(query, (project,))
 
-    def project_by_name(self, name):
-        query = "SELECT * FROM projects WHERE name = %s"
-        return self._execute_fetchone(query, (name,))
-
-    def domain_by_name(self, name):
-        query = "SELECT * FROM domains WHERE name = %s"
-        return self._execute_fetchone(query, (name,))
+    def hosts_by_domain(self, domain):
+        query = """
+        SELECT h.* FROM hosts h 
+            INNER JOIN domains_hosts dh 
+            ON h.id = dh.hosts_id 
+            INNER JOIN domains d 
+            ON d.id = dh.domains_id 
+        WHERE d.name = %s
+        """
+        return self._execute_fetchall(query, (domain,))
 
     def insert_host(self, address, family):
         query = "INSERT INTO hosts (address, family) VALUES (%s, %s) ON CONFLICT (address) DO UPDATE SET last_seen=now() RETURNING id"
         return self._insert_fetchone(query, (address, family))
+
+    def insert_host_for_domainname(self, domain, address, family):
+        dres = self.domain_by_name(domain)
+        if not dres:
+            print("Yoo wtf dres not found for {} {} {}".format(domain, address, family))
+            return {}
+        hres = self.insert_host(address, family)
+        if not hres:
+            print("Yoo wtf hres not found for {} {} {}".format(domain, address, family))
+            return {}
+        exists = self._domain_host_relation(dres["id"], hres["id"])
+        if exists:
+            return exists
+        else:
+            query = "INSERT INTO domains_hosts (domains_id, hosts_id) VALUES (%s, %s) RETURNING id"
+            return self._insert_fetchone(query, (dres["id"], hres["id"]))
+
+    def domain_by_id(self, id):
+        query = "SELECT * FROM domains WHERE id = %s"
+        return self._execute_fetchone(query, (id,))
+
+    def domain_by_name(self, name):
+        query = "SELECT * FROM domains WHERE name = %s"
+        return self._execute_fetchone(query, (name,))
+    def all_domains_by_projectid(self, project_id):
+        query = "SELECT * FROM domains WHERE project_id = %s"
+        return self._execute_fetchall(query, (project_id,))
+
+    def all_domains_by_host(self, host):
+        query = """
+        SELECT d.* FROM domains d 
+            INNER JOIN domains_hosts dh 
+            ON d.id = dh.domains_id 
+            INNER JOIN hosts h 
+            ON h.id = dh.hosts_id 
+        WHERE h.address = %s
+        """
+        return self._execute_fetchall(query, (host,))
 
     def insert_domain(self, name, project, sources=""):
         query = "INSERT INTO domains (name, sources, project_id) VALUES (%s, %s, %s) ON CONFLICT (name) DO UPDATE SET last_seen=now() RETURNING id"
@@ -139,16 +180,6 @@ class BBDB(object):
     def _domain_host_relation(self, domain_id, host_id):
         query = "SELECT * FROM domains_hosts WHERE domains_id = %s AND hosts_id = %s"
         return self._execute_fetchone(query, (domain_id, host_id))
-
-    def insert_host_for_domainname(self, domain, address, family):
-        dres = self.domain_by_name(domain)
-        hres = self.insert_host(address, family)
-        exists = self._domain_host_relation(dres["id"], hres["id"])
-        if exists:
-            return exists
-        else:
-            query = "INSERT INTO domains_hosts (domains_id, hosts_id) VALUES (%s, %s) RETURNING id"
-            return self._insert_fetchone(query, (dres["id"], hres["id"]))
 
     def fetch_port(self, port, host):
         hres = self.host_by_ip(host)
@@ -171,14 +202,21 @@ class BBDB(object):
         else:
             self.update_port_by_id(existing_port["id"], service, product, version)
             return existing_port
-    def all_domains_by_projectid(self, project_id):
-        query = "SELECT * FROM domains WHERE project_id = %s"
-        return self._execute_fetchall(query, (project_id,))
 
     def all_ports_for_subdomain(self, subdomain):
         query = "SELECT DISTINCT p.*, h.address FROM ports p INNER JOIN hosts h ON p.host_id = h.id INNER JOIN domains_hosts dh ON h.id = dh.hosts_id INNER JOIN domains d ON d.id = dh.domains_id WHERE d.name = %s"
         return self._execute_fetchall(query, (subdomain,))
 
+    def all_ports_for_host(self, host):
+        query = "SELECT DISTINCT p.*, h.address FROM ports p INNER JOIN hosts h ON p.host_id = h.id WHERE h.address = %s"
+        return self._execute_fetchall(query, (host,))
+    def webs_for_domain(self, domain):
+        query = "SELECT w.* FROM webs w INNER JOIN domains d ON w.domain_id = d.id WHERE d.name = %s"
+        return self._execute_fetchall(query, (domain,))
+
+    def webs_for_host(self, host):
+        query = "SELECT w.* FROM webs w INNER JOIN ports p ON w.port_id = p.id INNER JOIN hosts h ON p.host_id = h.id WHERE h.address = %s"
+        return self._execute_fetchall(query, (host,))
     def _webs_for_domainid_portid(self, domain_id, port_id):
         query = "SELECT * FROM webs WHERE domain_id = %s AND port_id = %s"
         return self._execute_fetchone(query, (domain_id, port_id))
@@ -197,3 +235,15 @@ class BBDB(object):
     def update_webs(self, domain_id, port_id, url, response, title, metadata):
         query = "UPDATE webs SET url=%s, domain_id=%s, port_id=%s, response=%s, title=%s, metadata=%s WHERE domain_id=%s AND port_id=%s RETURNING id"
         return self._insert_fetchone(query, (url, domain_id, port_id, response, title, metadata, domain_id, port_id))
+
+    def update_webs_by_url(self, url, response, title, metadata, screenshot=""):
+        query = "UPDATE webs SET response=%s, title=%s, metadata=%s, screenshot=%s WHERE url=%s RETURNING id"
+        return self._insert_fetchone(query, (response, title, metadata, screenshot, url))
+
+    def update_webs_by_id(self, id, url, response, title, metadata, screenshot=""):
+        query = "UPDATE webs SET url=%s, response=%s, title=%s, metadata=%s, screenshot=%s WHERE id=%s RETURNING id"
+        return self._insert_fetchone(query, (url, response, title, metadata, screenshot, id))
+
+    def update_webs_screenshot(self, id, screenshot):
+        query = "UPDATE webs SET screenshot=%s WHERE id=%s RETURNING id"
+        return self._insert_fetchone(query, (screenshot, id))

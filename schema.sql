@@ -51,6 +51,8 @@ CREATE TABLE "webs" (
   "port_id" int,
   "response" varchar,
   "title" varchar,
+  "screenshot" varchar,
+  "screenshot_url" varchar,
   "metadata" JSONB DEFAULT '{}',
   "last_seen" timestamp DEFAULT (now())
 );

@@ -13,24 +13,32 @@ class WebTechDetect(object):
     def __init__(self, domain, ports):
         self.domain = domain
         self.ports = ports
+        self.running = False
+        self._process = None
 
     def start(self):
         tmpdir = "./techdetect"
         pathlib.Path(tmpdir).mkdir(parents=True, exist_ok=True)
-        r = Runner("httpx -sc -cl -ct -favicon -hash -title -server -td -ip -random-agent -cdn -json -srd {} -p {}".format(
+        self._process = Runner("httpx -sc -cl -ct -favicon -hash -title -server -td -ip -random-agent -cdn -json -srd {} -p {}".format(
             tmpdir, self.ports), stdin=self.domain)
-        r.start()
-        while r.running():
+        self.running = True
+        self._process.start()
+        while self._process.running():
             time.sleep(0.01)
-        if r.exitcode() != 0:
-            raise WebTechDetectException("httpx failed with exit code {}: {}\n{}".format(r.exitcode(), r.output(), r.error()))
-        if r.output() == "":
+        self.running = False
+        if self._process.exitcode() != 0:
+            raise WebTechDetectException("httpx failed with exit code {}: {}\n{}".format(
+                self._process.exitcode(), self._process.output(), self._process.error()))
+        if self._process.output() == "":
             raise WebTechDetectException("httpx failed to detect any web technologies (no output) for {}".format(self.domain))
-        #print("---------------------------------------\n{}\n---------------------------------------".format(r.output()))
         outputs = []
-        for line in r.output().splitlines():
+        for line in self._process.output().splitlines():
             outputs.append(self._parse(line))
         return outputs
+
+    def kill(self):
+        if self.running:
+            self._process.kill()
 
     def _parse(self, data):
         entry = json.loads(data)
@@ -58,6 +66,7 @@ class WebTechDetect(object):
         except KeyError:
             pass
         return WebResponse(domain, port, url, title, response, entry)
+
 
 class WebResponse(object):
     def __init__(self, domain, port, url, title, response, metadata):

@@ -31,6 +31,8 @@ class PortScanner(object):
         self.hosts = hosts
         self.ports = ports
         self.topports = topports
+        self.running = False
+        self._process = None
 
     def scan(self):
         """
@@ -46,22 +48,30 @@ class PortScanner(object):
         else:
             whichports = "-p{}".format(self.ports)
 
-        runner = Runner("nmap -sC --host-timeout 5m -T4 -iL tempfile.txt {} -oX {}".format(whichports, timestamped_filename))
-        runner.start()
-        while runner.running():
+        self._process = Runner("nmap -sC --host-timeout 5m -T4 -iL tempfile.txt {} -oX {}".format(whichports, timestamped_filename))
+        self.running = True
+        self._process.start()
+        while self._process.running():
             time.sleep(0.01)
-            if runner.run_time() > 5 * 60 * len(self.hosts):
+            if self._process.run_time() > 5 * 60 * len(self.hosts):
                 # Process has most likely halted, as we have --host-timeout 5m
-                runner.kill()
+                self._process.kill()
+                self.running = False
                 raise PortScannerException("nmap froze, and was killed")
-        if runner.exitcode() != 0:
+        self.running = False
+        if self._process.exitcode() != 0:
             output = ""
-            if runner.output():
-                output = runner.output()
-            if runner.error():
-                output += "\n" + runner.error()
-            raise PortScannerException("nmap failed with exit code {}: {}".format(runner.exitcode(), output))
+            if self._process.output():
+                output = self._process.output()
+            if self._process.error():
+                output += "\n" + self._process.error()
+            raise PortScannerException("nmap failed with exit code {}: {}".format(self._process.exitcode(), output))
         return timestamped_filename
+
+    def kill(self):
+        """Kills the nmap process"""
+        if self.running:
+            self._process.kill()
 
     """def parse(self, filename):
 
