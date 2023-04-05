@@ -48,7 +48,7 @@ class PortScanner(object):
         else:
             whichports = "-p{}".format(self.ports)
 
-        self._process = Runner("nmap -sC --host-timeout 5m -T4 -iL tempfile.txt {} -oX {}".format(whichports, timestamped_filename))
+        self._process = Runner("nmap -sC --host-timeout 5m --script-timeout 5m -T4 --open -iL tempfile.txt {} -oX {}".format(whichports, timestamped_filename))
         self.running = True
         self._process.start()
         while self._process.running():

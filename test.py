@@ -11,6 +11,7 @@ import requests
 import time
 import uuid
 import shutil
+import ipaddress
 
 os.environ['PATH'] += ":/home/joona/go/bin"
 
@@ -85,7 +86,14 @@ class Automation(object):
 
     def portscan_and_update(self):
         db_hosts = self.db.hosts_by_projectname(self.project["name"])
-        hosts = [h["address"] for h in db_hosts]
+        hosts = []
+        cdn_hosts = []
+        for h in db_hosts:
+            if self.is_cdn(h["address"]):
+                cdn_hosts.append(h)
+            else:
+                hosts.append(h["address"])
+
         scanner = PortScanner(hosts)
         output = scanner.scan()
         ps_results = scanner.parse(output)
@@ -93,6 +101,9 @@ class Automation(object):
             for port in host.ports:
                 self.db.insert_or_update_port_for_host(port.port, port.protocol, port.service, port.product,
                                                        port.version, host.ip)
+        for host in cdn_hosts:
+            self.db.insert_or_update_port_for_host("80", "tcp", "http", "CDN HTTP", "", host["address"])
+            self.db.insert_or_update_port_for_host("443", "tcp", "https", "CDN HTTPS", "", host["address"])
 
     def screenshot_webs(self, refresh=False):
         GOWITNESS_URL = "https://bbss.0xff.fi/api/"
@@ -173,6 +184,17 @@ class Automation(object):
                                                       json.dumps(result.metadata))
                 except techdetect.WebTechDetectException:
                     continue
+
+    def is_cdn(self, host):
+        cdn = None
+        with open('cdnranges.txt') as f:
+            cdndata = json.loads(f.read())
+        for cdn_name, cidrlist in cdndata.items():
+            for cidr in cidrlist:
+                if ipaddress.ip_address(host) in ipaddress.ip_network(cidr):
+                    cdn = cdn_name
+                    break
+        return cdn
 
 
 a = Automation("Visma")

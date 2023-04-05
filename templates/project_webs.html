@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %} Websites for project: <a href="{{ url_for('project', project_id=project['id']) }}">{{ project['name'] }}</a>{% endblock %}</h1>
+    <br />
+    <h2>Websites</h2>
+    <table id="websiteTable" class="table table-hover table-product" style="width:100%">
+        <thead>
+        <tr>
+            <th>Screenshot</th>
+            <th>URL</th>
+            <th>Title</th>
+            <th>Content-Type</th>
+            <th>Tech</th>
+            <th>Last seen</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for domain in domains %}
+        {% for web in domain['websites'] %}
+            <tr>
+                <td>{% if web['screenshot'] %}<img style="width: 300px;" src="/static/screenshots/thumb_{{ web["screenshot"] }}" />{% endif %}</td>
+                <td>{{ web['url'] }}</td>
+                <td>{{ web['title'] }}</td>
+                <td>{{ web['metadata']['content_type'] }}</td>
+                <td>
+                    {% for tech in web['metadata']['tech'] %}
+                        <span class="badge bg-dark">{{ tech }}</span>
+                    {% endfor %}
+                </td>
+                <td>{{ web['last_seen'].strftime("%Y-%m-%d %H:%M:%S") }}</td>
+                <td>
+                    <div class="dropdown">
+                      <a class="dropdown-toggle icon-burger-mini" href="#" role="button" id="dropdownMenuLink"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-display="static">
+                      </a>
+
+                      <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuLink">
+                        <a class="dropdown-item" href="#">Action</a>
+                        <a class="dropdown-item" href="#">Another action</a>
+                        <a class="dropdown-item" href="#">Something else here</a>
+                      </div>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        {% endfor %}
+        </tbody>
+    </table>
+    <script>
+        let wtable = new DataTable('#websiteTable');
+    </script>
+{% endblock %}

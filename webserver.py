@@ -27,6 +27,14 @@ def project(project_id):
     domains = [get_domain_object(d) for d in db.all_domains_by_projectid(project_id)]
     return render_template('project.html', project=project, domains=domains)
 
+@app.route('/projects/<int:project_id>/websites')
+def project_websites(project_id):
+    project = db.project_by_id(project_id)
+    if not project:
+        abort(404)
+    domains = [get_domain_object(d) for d in db.all_domains_by_projectid(project_id)]
+    return render_template('project_webs.html', project=project, domains=domains)
+
 @app.route('/domain/<int:domain_id>')
 def domain(domain_id):
     domain = db.domain_by_id(domain_id)
